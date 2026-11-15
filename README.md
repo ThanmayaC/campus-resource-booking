@@ -1,41 +1,67 @@
 # Campus Resource Booking Lite
 
-Students can view resources, register/login, book one for a date, and see all bookings. The same resource cannot be booked twice on the same day. Only logged-in users can book (JWT auth, passwords hashed with bcrypt).
+Students register/log in first, then view resources, book one for a date, and see all bookings. The same resource cannot be booked twice on the same day. Auth uses JWT; passwords are hashed with bcrypt.
 
-**Stack:** React + Vite, Node.js, Express, MongoDB, Mongoose.
+**Stack:** React + Vite, Node.js, Express, MongoDB (Mongoose). Frontend on Vercel, backend on Render.
 
-## Setup
+## Environment variables
 
-1. Install Node.js 20+ and MongoDB (local install or a free MongoDB Atlas cluster).
-2. Put your connection string in `backend/.env`:
+| Where | Variable | Example |
+|---|---|---|
+| Backend (`backend/.env` locally, Render dashboard in production) | `MONGO_URI` | `mongodb+srv://USER:PASSWORD@cluster0.xxxx.mongodb.net/campus-booking` |
+| Backend | `PORT` | `5000` (Render sets this automatically) |
+| Backend | `JWT_SECRET` | any long random string, e.g. output of `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| Backend | `CLIENT_URL` | `https://your-app.vercel.app` (no trailing slash) |
+| Frontend (Vercel dashboard, or `frontend/.env.local`) | `VITE_API_URL` | `https://your-api.onrender.com/api` |
+
+Locally, `VITE_API_URL` is optional: the frontend falls back to `http://localhost:5000/api`.
+`.env` files are in `.gitignore` and must never be committed.
+
+## Run locally
+
+1. Install Node.js 20+.
+2. Create `backend/.env`:
    ```
    MONGO_URI=mongodb://127.0.0.1:27017/campus-booking
    PORT=5000
    JWT_SECRET=any_long_random_string
    ```
-   For Atlas, use the `mongodb+srv://...` string from Atlas → Connect → Drivers.
-3. Install dependencies (from the `campus-booking` folder):
+   (or your MongoDB Atlas connection string)
+3. From the project folder:
    ```
    npm install
+   npm run server     # backend  -> http://localhost:5000
+   npm run client     # frontend -> http://localhost:5173 (second terminal)
    ```
+4. Production build check: `npm run build` (output in `frontend/dist`).
 
-## Run
+## Deploy
 
-Terminal 1 (backend, http://localhost:5000):
-```
-npm run server
-```
-Terminal 2 (frontend, http://localhost:5173):
-```
-npm run client
-```
+### 1. MongoDB Atlas
+- Create a free cluster, a database user, and copy the connection string (Connect → Drivers).
+- Network Access → allow `0.0.0.0/0` (Render's IP addresses change).
+
+### 2. Backend on Render
+- New → Web Service → connect this GitHub repo.
+- Build command: `npm install`
+- Start command: `npm start`
+- Environment variables: `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL` (add after the Vercel deploy, then redeploy).
+- Test: `https://your-api.onrender.com/api/resources`
+
+### 3. Frontend on Vercel
+- New Project → import this repo (root directory: the repo root).
+- Framework preset: Other (or Vite). Build command: `npm run build`. Output directory: `frontend/dist`.
+- Environment variable: `VITE_API_URL=https://your-api.onrender.com/api`
+- After deploy, copy the Vercel URL into Render's `CLIENT_URL`.
+
+Note: Vite bakes `VITE_API_URL` in at build time, so redeploy Vercel after changing it.
 
 ## API
 
 | Method | Route | Purpose |
 |---|---|---|
 | GET | /api/resources | List resources |
-| GET | /api/bookings | List bookings |
 | POST | /api/register | Create user `{ username, password }` |
 | POST | /api/login | Returns `{ token, username }` |
-| POST | /api/bookings | **Needs** `Authorization: Bearer <token>`. Body `{ resource, bookingDate }` (409 if duplicate) |
+| GET | /api/bookings | List bookings (needs `Authorization: Bearer <token>`) |
+| POST | /api/bookings | Create booking `{ resource, bookingDate }` (needs token; 409 if duplicate) |

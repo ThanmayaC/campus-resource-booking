@@ -5,7 +5,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const app = express();
-app.use(cors());
+// Allow any localhost port (development) + the deployed Vercel site (CLIENT_URL)
+app.use(cors({ origin: [/^http:\/\/localhost:\d+$/, process.env.CLIENT_URL].filter(Boolean) }));
 app.use(express.json());
 
 // Fixed list of resources (no database needed for these)
@@ -61,11 +62,11 @@ function auth(req, res, next) {
 
 app.get('/api/resources', (req, res) => res.json(resources));
 
-app.get('/api/bookings', async (req, res) => {
+app.get('/api/bookings', auth, async (req, res) => {
   res.json(await Booking.find().sort({ bookingDate: 1 }));
 });
 
-// Only logged-in users can book; the name comes from the token, not the form
+// The student name comes from the token, not the form
 app.post('/api/bookings', auth, async (req, res) => {
   const { resource, bookingDate } = req.body;
   const studentName = req.user.username;
@@ -83,6 +84,7 @@ app.post('/api/bookings', auth, async (req, res) => {
   }
 });
 
+const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`)))
+  .then(() => app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`)))
   .catch((err) => console.error('MongoDB connection failed:', err.message));
