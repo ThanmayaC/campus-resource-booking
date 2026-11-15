@@ -5,8 +5,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const app = express();
-// Allow any localhost port (development) + the deployed Vercel site (CLIENT_URL)
-app.use(cors({ origin: [/^http:\/\/localhost:\d+$/, process.env.CLIENT_URL].filter(Boolean) }));
+// Allow local Vite dev servers + the deployed Vercel site (CLIENT_URL)
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL].filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Fixed list of resources (no database needed for these)
@@ -59,6 +60,9 @@ function auth(req, res, next) {
     res.status(401).json({ message: 'Please log in first' });
   }
 }
+
+// Simple check that the server is up (useful for Render)
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.get('/api/resources', (req, res) => res.json(resources));
 

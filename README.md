@@ -27,12 +27,13 @@ Locally, `VITE_API_URL` is optional: the frontend falls back to `http://localhos
    JWT_SECRET=any_long_random_string
    ```
    (or your MongoDB Atlas connection string)
-3. From the project folder:
+3. From the `campus-booking` folder (the one containing `package.json`):
    ```
    npm install
    npm run server     # backend  -> http://localhost:5000
    npm run client     # frontend -> http://localhost:5173 (second terminal)
    ```
+   The backend only accepts browser requests from `localhost:5173`, `localhost:5174`, and `CLIENT_URL`.
 4. Production build check: `npm run build` (output in `frontend/dist`).
 
 ## Deploy
@@ -42,17 +43,23 @@ Locally, `VITE_API_URL` is optional: the frontend falls back to `http://localhos
 - Network Access → allow `0.0.0.0/0` (Render's IP addresses change).
 
 ### 2. Backend on Render
-- New → Web Service → connect this GitHub repo.
+- New → Web Service → connect this GitHub repo. Runtime: Node. Root directory: leave empty.
 - Build command: `npm install`
 - Start command: `npm start`
-- Environment variables: `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL` (add after the Vercel deploy, then redeploy).
-- Test: `https://your-api.onrender.com/api/resources`
+- Environment variables: `MONGO_URI`, `JWT_SECRET` (do not set `PORT`; Render provides it).
+- Health check path (optional): `/api/health`
+- After deploy, test: `https://your-api.onrender.com/api/health` → `{"status":"ok"}`
+- Free Render services sleep when idle; the first request can take ~30–60 seconds.
 
 ### 3. Frontend on Vercel
-- New Project → import this repo (root directory: the repo root).
-- Framework preset: Other (or Vite). Build command: `npm run build`. Output directory: `frontend/dist`.
+- New Project → import this repo. Root directory: leave as the repo root.
+- Framework preset: Other. Build command: `npm run build`. Output directory: `frontend/dist`. Install command: `npm install`.
 - Environment variable: `VITE_API_URL=https://your-api.onrender.com/api`
-- After deploy, copy the Vercel URL into Render's `CLIENT_URL`.
+- Deploy, then copy the Vercel URL (e.g. `https://your-app.vercel.app`, no trailing slash).
+
+### 4. Connect them
+- In Render → Environment, add `CLIENT_URL=https://your-app.vercel.app` and save (Render redeploys).
+- Open the Vercel URL, register, log in, and make a booking.
 
 Note: Vite bakes `VITE_API_URL` in at build time, so redeploy Vercel after changing it.
 
@@ -60,6 +67,7 @@ Note: Vite bakes `VITE_API_URL` in at build time, so redeploy Vercel after chang
 
 | Method | Route | Purpose |
 |---|---|---|
+| GET | /api/health | Returns `{ "status": "ok" }` |
 | GET | /api/resources | List resources |
 | POST | /api/register | Create user `{ username, password }` |
 | POST | /api/login | Returns `{ token, username }` |
